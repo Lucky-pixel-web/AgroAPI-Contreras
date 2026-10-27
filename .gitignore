@@ -1,0 +1,17 @@
+# Archivos generados por Maven y Kotlin
+/target/
+/.kotlin/
+
+# Archivos personales de IntelliJ
+/.idea/
+*.iml
+
+# Credenciales y configuraciones locales
+.env
+.env.*
+application-local.yml
+application-local.yaml
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

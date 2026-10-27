@@ -1,0 +1,3 @@
+Aqui colocaremos los scripts Flyway del esquema AgroSierra.
+Ejemplo: V1__crear_tablas.sql
+No ejecutar migraciones del proyecto PharmaSoft en este esquema.
