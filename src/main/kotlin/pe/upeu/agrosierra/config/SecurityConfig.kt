@@ -53,7 +53,6 @@ class SecurityConfig(
             .authorizeHttpRequests { reglas ->
 
                 reglas.requestMatchers(
-                    "/api/health",
                     "/api/v1/auth/login"
                 ).permitAll()
 
