@@ -84,6 +84,13 @@ class DatosSemilla(
             "CAMPANIA_CERRAR"
         )
 
+        val supervisor = guardarRol(
+            "SUPERVISOR_CALIDAD",
+            "LOTE_LEER",
+            "LABOR_LEER",
+            "LABOR_EDITAR"
+        )
+
         val administrador = guardarRol(
             "ADMINISTRADOR",
             "LOTE_LEER",
@@ -118,6 +125,11 @@ class DatosSemilla(
         )
         guardarUsuario(
             "admin", "Administrador", administrador
+        )
+        guardarUsuario(
+            "supervisor1",
+            "Supervisor de calidad",
+            supervisor
         )
     }
 
