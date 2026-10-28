@@ -29,6 +29,9 @@ class LaborEntidad(
     @Column(nullable = false)
     var cantidad: Double = 0.0,
 
+    @Column(name = "CANTIDAD_JORNALES", nullable = false)
+    var cantidadJornales: Int = 1,
+
     @Column(nullable = false, length = 500)
     var observacion: String = "",
 

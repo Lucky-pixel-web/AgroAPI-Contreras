@@ -45,12 +45,14 @@ fun LoteEntidad.aDto() = LoteDto(
     dosisMaximaPorHectarea = dosisMaximaPorHectarea
 )
 
+
 data class LaborSolicitud(
     val loteId: Long? = null,
     val tipo: TipoLabor? = null,
     val fecha: String? = null,
     val cantidad: Double? = null,
-    val observacion: String? = null
+    val observacion: String? = null,
+    val cantidadJornales: Int? = null
 )
 
 data class LaborDto(
@@ -61,7 +63,8 @@ data class LaborDto(
     val responsable: String,
     val cantidad: Double,
     val observacion: String,
-    val pendiente: Boolean = false
+    val pendiente: Boolean = false,
+    val cantidadJornales: Int
 )
 
 fun LaborEntidad.aDto() = LaborDto(
@@ -72,5 +75,7 @@ fun LaborEntidad.aDto() = LaborDto(
     responsable = responsable,
     cantidad = cantidad,
     observacion = observacion,
-    pendiente = false
+    pendiente = false,
+    cantidadJornales = cantidadJornales
 )
+

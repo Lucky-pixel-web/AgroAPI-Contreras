@@ -23,6 +23,7 @@ class LaborService(
     private val usuarios: UsuarioRepository
 ) {
 
+    // LISTAR LABORES DE UN LOTE
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('LABOR_LEER')")
     fun listarPorLote(
@@ -32,7 +33,6 @@ class LaborService(
     ): PaginaRespuesta<LaborDto> {
 
         validarPagina(pagina, tamanio)
-
         buscarLote(loteId)
 
         return labores.findByLote_IdOrderByFechaDesc(
@@ -41,6 +41,7 @@ class LaborService(
         ).map { it.aDto() }.aRespuesta()
     }
 
+    // CREAR UNA NUEVA LABOR
     @Transactional
     @PreAuthorize("hasAuthority('LABOR_CREAR')")
     fun crear(
@@ -62,6 +63,7 @@ class LaborService(
             fecha = datos.fecha,
             responsable = usuario.username,
             cantidad = datos.cantidad,
+            cantidadJornales = datos.cantidadJornales,
             observacion = datos.observacion,
             registradaEn = LocalDateTime.now()
         )
@@ -69,6 +71,7 @@ class LaborService(
         return labores.saveAndFlush(labor).aDto()
     }
 
+    // ACTUALIZAR UNA LABOR
     @Transactional
     @PreAuthorize("hasAuthority('LABOR_EDITAR')")
     fun actualizar(
@@ -88,7 +91,8 @@ class LaborService(
 
         verificarCampania(lote)
 
-        // RN-02: restricción especial del técnico.
+        // RN-02: El técnico solo puede editar
+        // sus propias labores durante 24 horas.
         if (usuario.rol?.codigo == "TECNICO") {
 
             val esPropia =
@@ -127,20 +131,22 @@ class LaborService(
         labor.tipo = datos.tipo
         labor.fecha = datos.fecha
         labor.cantidad = datos.cantidad
+        labor.cantidadJornales = datos.cantidadJornales
         labor.observacion = datos.observacion
 
         return labores.saveAndFlush(labor).aDto()
     }
 
+    // ELIMINAR UNA LABOR
     @Transactional
     @PreAuthorize("hasAuthority('LABOR_ELIMINAR')")
     fun eliminar(id: Long) {
 
         val labor = buscarLabor(id)
-
         labores.delete(labor)
     }
 
+    // BUSCAR LOTE POR ID
     private fun buscarLote(id: Long): LoteEntidad {
         return lotes.findById(id).orElseThrow {
             ApiException(
@@ -150,6 +156,7 @@ class LaborService(
         }
     }
 
+    // BUSCAR LABOR POR ID
     private fun buscarLabor(id: Long): LaborEntidad {
         return labores.findById(id).orElseThrow {
             ApiException(
@@ -159,6 +166,7 @@ class LaborService(
         }
     }
 
+    // OBTENER USUARIO AUTENTICADO
     private fun usuarioActual(
         auth: JwtAuthenticationToken
     ): UsuarioEntidad {
@@ -188,8 +196,10 @@ class LaborService(
         return usuario
     }
 
-    // RN-01
+    // RN-01: NO REGISTRAR NI MODIFICAR
+    // LABORES EN CAMPAÑAS CERRADAS
     private fun verificarCampania(lote: LoteEntidad) {
+
         if (lote.campaniaCerrada == 1) {
             throw ApiException(
                 HttpStatus.CONFLICT,
@@ -198,11 +208,13 @@ class LaborService(
         }
     }
 
-    // RN-04
+    // RN-04: VALIDAR DOSIS MÁXIMA
+    // PARA LABORES DE FUMIGACIÓN
     private fun verificarDosis(
         lote: LoteEntidad,
         datos: DatosLabor
     ) {
+
         if (datos.tipo != TipoLabor.FUMIGACION) return
 
         val maximo =
@@ -221,22 +233,31 @@ class LaborService(
         }
     }
 
+    // VALIDAR TODOS LOS DATOS DEL FORMULARIO
+    // INCLUYE CANTIDAD DE JORNALES (SC-C)
     private fun validarDatos(
         solicitud: LaborSolicitud
     ): DatosLabor {
 
         val errores = mutableMapOf<String, String>()
 
+        // VALIDAR LOTE
         val loteId = solicitud.loteId
+
         if (loteId == null || loteId <= 0) {
-            errores["loteId"] = "Seleccione un lote válido"
+            errores["loteId"] =
+                "Seleccione un lote válido"
         }
 
+        // VALIDAR TIPO DE LABOR
         val tipo = solicitud.tipo
+
         if (tipo == null) {
-            errores["tipo"] = "Seleccione un tipo de labor"
+            errores["tipo"] =
+                "Seleccione un tipo de labor"
         }
 
+        // VALIDAR FECHA
         val fecha = try {
             solicitud.fecha
                 ?.takeIf { it.isNotBlank() }
@@ -246,11 +267,15 @@ class LaborService(
         }
 
         if (fecha == null) {
-            errores["fecha"] = "Use el formato AAAA-MM-DD"
+            errores["fecha"] =
+                "Use el formato AAAA-MM-DD"
         }
 
+        // VALIDAR CANTIDAD
         val cantidad = solicitud.cantidad
-        if (cantidad == null ||
+
+        if (
+            cantidad == null ||
             !cantidad.isFinite() ||
             cantidad <= 0.0
         ) {
@@ -258,15 +283,31 @@ class LaborService(
                 "La cantidad debe ser mayor que cero"
         }
 
-        val observacion = solicitud.observacion?.trim()
+        // VALIDAR OBSERVACIÓN
+        val observacion =
+            solicitud.observacion?.trim()
 
-        if (observacion.isNullOrBlank() ||
+        if (
+            observacion.isNullOrBlank() ||
             observacion.length > 500
         ) {
             errores["observacion"] =
                 "La observación debe tener entre 1 y 500 caracteres"
         }
 
+        // SC-C: VALIDAR CANTIDAD DE JORNALES
+        val cantidadJornales =
+            solicitud.cantidadJornales
+
+        if (
+            cantidadJornales == null ||
+            cantidadJornales < 1
+        ) {
+            errores["cantidadJornales"] =
+                "La cantidad de jornales debe ser mayor que cero"
+        }
+
+        // RESPONDER SI EXISTEN ERRORES
         if (errores.isNotEmpty()) {
             throw ApiException(
                 HttpStatus.BAD_REQUEST,
@@ -275,20 +316,24 @@ class LaborService(
             )
         }
 
+        // DEVOLVER DATOS VALIDADOS
         return DatosLabor(
             loteId = requireNotNull(loteId),
             tipo = requireNotNull(tipo),
             fecha = requireNotNull(fecha),
             cantidad = requireNotNull(cantidad),
-            observacion = requireNotNull(observacion)
+            observacion = requireNotNull(observacion),
+            cantidadJornales = requireNotNull(cantidadJornales)
         )
     }
 
+    // ESTRUCTURA INTERNA DE DATOS VALIDADOS
     private data class DatosLabor(
         val loteId: Long,
         val tipo: TipoLabor,
         val fecha: LocalDate,
         val cantidad: Double,
-        val observacion: String
+        val observacion: String,
+        val cantidadJornales: Int
     )
 }

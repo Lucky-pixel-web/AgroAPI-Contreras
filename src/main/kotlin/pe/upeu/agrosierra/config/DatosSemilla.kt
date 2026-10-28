@@ -263,6 +263,7 @@ class DatosSemilla(
                     fecha = hoy.minusDays(trabajo.dias),
                     responsable = trabajo.responsable,
                     cantidad = trabajo.cantidad,
+                    cantidadJornales = (indice % 3) + 1,
                     observacion = trabajo.observacion,
                     registradaEn = ahora.minusHours(indice.toLong() + 1)
                 )
